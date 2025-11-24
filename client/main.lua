@@ -138,7 +138,8 @@ local function runProgress(recipe)
         local method = progress and progress.method
 
         if resource and method and exports[resource] and exports[resource][method] then
-            local result = exports[resource][method]({ duration = duration, label = label })
+            local export = exports[resource]
+            local result = export[method](export, { duration = duration, label = label })
             return result ~= false
         end
 
