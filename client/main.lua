@@ -22,7 +22,7 @@ local function getCoordsComponents(coords)
         local x = coords.x or coords[1]
         local y = coords.y or coords[2]
         local z = coords.z or coords[3]
-        local w = coords.w or coords[4] or coords.heading
+        local w = coords.h or coords.heading or coords.w or coords[4]
         return x, y, z, w
     end
 end
