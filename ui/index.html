@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Craft 3D</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app" class="hidden">
+        <div class="panel">
+            <div class="panel__header">
+                <h1 id="panel-title">Établi de craft</h1>
+                <button id="close" class="btn btn--ghost">✕</button>
+            </div>
+            <div id="recipes" class="recipes"></div>
+            <div class="panel__footer">
+                <div class="hint">↑ ↓ Naviguer · Entrée/Space Craft · Échap Fermer</div>
+                <button id="craft" class="btn">Fabriquer</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="progress" class="hidden">
+        <div class="progress">
+            <div class="progress__label" id="progress-label">Fabrication...</div>
+            <div class="progress__bar">
+                <div class="progress__bar-fill" id="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
