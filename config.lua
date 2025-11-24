@@ -42,5 +42,9 @@ Config.Recipes = {
 }
 
 Config.UseProgressBar = true -- si vous avez un export de barre de progression type ox_lib / rprogress
-Config.ProgressExport = 'progressBar' -- fonction client appelée progressBar(duration, label)
+-- Définissez la ressource et la méthode exportée à appeler: exports[resource][method](duration, label)
+Config.ProgressExport = {
+    resource = 'ox_lib',
+    method = 'progressBar'
+}
 Config.Debug = false
