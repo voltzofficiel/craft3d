@@ -107,6 +107,30 @@ local function closeMenu()
     openTable = nil
 end
 
+local function runProgress(recipe)
+    if Config.UseProgressBar then
+        local progress = Config.ProgressExport
+        local resource = progress and progress.resource
+        local method = progress and progress.method
+
+        if resource and method and exports[resource] and exports[resource][method] then
+            exports[resource][method](recipe.time, ('Fabrication: %s'):format(recipe.label))
+            return
+        end
+
+        debugPrint('Progression: export introuvable, utilisation de la barre locale')
+    end
+
+    local endTime = GetGameTimer() + recipe.time
+    while GetGameTimer() < endTime do
+        Wait(0)
+        DrawRect(0.5, 0.92, 0.2, 0.015, 10, 10, 10, 150)
+        local remaining = (endTime - GetGameTimer()) / recipe.time
+        DrawRect(0.5 - (1 - remaining) * 0.1, 0.92, 0.2 * remaining, 0.008, 255, 163, 26, 220)
+        DrawControlHints(('Fabrication en cours... %ds'):format(math.ceil((endTime - GetGameTimer()) / 1000)), 0.5, 0.88)
+    end
+end
+
 local function startCraft(recipe)
     if isCrafting then return end
     isCrafting = true
@@ -114,18 +138,7 @@ local function startCraft(recipe)
     local ped = PlayerPedId()
     TaskStartScenarioInPlace(ped, 'WORLD_HUMAN_HAMMERING', 0, true)
 
-    if Config.UseProgressBar and exports[Config.ProgressExport] then
-        exports[Config.ProgressExport](recipe.time, ('Fabrication: %s'):format(recipe.label))
-    else
-        local endTime = GetGameTimer() + recipe.time
-        while GetGameTimer() < endTime do
-            Wait(0)
-            DrawRect(0.5, 0.92, 0.2, 0.015, 10, 10, 10, 150)
-            local remaining = (endTime - GetGameTimer()) / recipe.time
-            DrawRect(0.5 - (1 - remaining) * 0.1, 0.92, 0.2 * remaining, 0.008, 255, 163, 26, 220)
-            DrawControlHints(('Fabrication en cours... %ds'):format(math.ceil((endTime - GetGameTimer()) / 1000)), 0.5, 0.88)
-        end
-    end
+    runProgress(recipe)
 
     ClearPedTasks(ped)
     TriggerServerEvent('craft3d:finishCraft', selectedRecipe)
