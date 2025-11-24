@@ -6,10 +6,30 @@ local menuOpen = false
 local selectedRecipe = 1
 local isCrafting = false
 
+local function getCoordsComponents(coords)
+    if not coords then return end
+
+    local coordsType = type(coords)
+
+    if coordsType == 'vector4' then
+        return coords.x, coords.y, coords.z, coords.w
+    elseif coordsType == 'vector3' then
+        return coords.x, coords.y, coords.z
+    elseif coordsType == 'table' then
+        local x = coords.x or coords[1]
+        local y = coords.y or coords[2]
+        local z = coords.z or coords[3]
+        local w = coords.w or coords[4] or coords.heading
+        return x, y, z, w
+    end
+end
+
 local function getTablePosition(tableData)
     local coords = tableData.coords
-    if coords then
-        return vector3(coords.x, coords.y, coords.z)
+    local x, y, z = getCoordsComponents(coords)
+
+    if x and y and z then
+        return vector3(x, y, z)
     end
 
     return vector3(0.0, 0.0, 0.0)
@@ -17,8 +37,10 @@ end
 
 local function getTableHeading(tableData)
     local coords = tableData.coords
-    if coords and coords.w then
-        return coords.w
+    local _, _, _, w = getCoordsComponents(coords)
+
+    if w then
+        return w
     end
 
     return tableData.heading or 0.0
