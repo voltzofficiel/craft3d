@@ -16,7 +16,8 @@ body {
     background: transparent;
 }
 
-.hidden {
+#app.hidden,
+#progress.hidden {
     display: none;
 }
 
