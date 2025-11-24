@@ -5,8 +5,7 @@ Config.Locale = 'fr'
 Config.Tables = {
     {
         model = `prop_tool_bench02_ld`,
-        coords = vector3(-518.18, -171.05, 37.65),
-        heading = 28.0,
+        coords = vector4(-518.18, -171.05, 37.65, 28.0),
         radius = 2.0
     }
 }
