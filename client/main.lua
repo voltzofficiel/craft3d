@@ -17,7 +17,7 @@ local function getCoordsComponents(coords)
     if coordsType == 'vector4' then
         return coords.x, coords.y, coords.z, coords.w
     elseif coordsType == 'vector3' then
-        return coords.x, coords.y, coords.z, 0.0
+        return coords.x, coords.y, coords.z, nil
     elseif coordsType == 'table' then
         local x = coords.x or coords[1]
         local y = coords.y or coords[2]

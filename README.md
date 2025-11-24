@@ -18,7 +18,8 @@ Table de craft immersive avec menu 3D ancré dans le monde pour ESX.
 
 ## Configuration
 - `Config.Tables` : position, rayon et modèle de chaque établi (plusieurs entrées possibles).
-  - Les coordonnées peuvent être définies en `{ x = X, y = Y, z = Z, h = H }` pour utiliser directement X/Y/Z/H.
+  - Les coordonnées peuvent être définies en `{ x = X, y = Y, z = Z, h = H }` pour utiliser directement X/Y/Z/H (ou `heading = H`).
+  - Vous pouvez aussi fournir un `heading` séparé dans l'entrée si vous passez un `vector3` pour les coordonnées.
 - `Config.Recipes` : label, item résultant, quantités requises et durée de craft (ms).
 - `Config.UseProgressBar` / `Config.ProgressExport` : active un export de barre de progression déjà présent sur votre serveur.
 - `Config.Debug` : affiche des logs supplémentaires côté client.
