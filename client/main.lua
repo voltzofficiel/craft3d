@@ -129,14 +129,17 @@ local function openMenu(tableData)
 end
 
 local function runProgress(recipe)
+    local duration = tonumber(recipe.time) or 0
+    local label = ('Fabrication: %s'):format(recipe.label)
+
     if Config.UseProgressBar then
         local progress = Config.ProgressExport
         local resource = progress and progress.resource
         local method = progress and progress.method
 
         if resource and method and exports[resource] and exports[resource][method] then
-            exports[resource][method](recipe.time, ('Fabrication: %s'):format(recipe.label))
-            return
+            local result = exports[resource][method]({ duration = duration, label = label })
+            return result ~= false
         end
 
         debugPrint('Progression: export introuvable, utilisation de la barre locale')
@@ -144,16 +147,18 @@ local function runProgress(recipe)
 
     SendNUIMessage({
         action = 'progress',
-        label = ('Fabrication: %s'):format(recipe.label),
-        duration = recipe.time
+        label = label,
+        duration = duration
     })
 
-    local endTime = GetGameTimer() + recipe.time
+    local endTime = GetGameTimer() + duration
     while GetGameTimer() < endTime do
         Wait(0)
     end
 
     SendNUIMessage({ action = 'progress-finish' })
+
+    return true
 end
 
 local function startCraft(recipeIndex)
@@ -169,10 +174,15 @@ local function startCraft(recipeIndex)
     local ped = PlayerPedId()
     TaskStartScenarioInPlace(ped, 'WORLD_HUMAN_HAMMERING', 0, true)
 
-    runProgress(recipe)
+    local success = runProgress(recipe)
 
-    ClearPedTasks(ped)
-    TriggerServerEvent('craft3d:finishCraft', recipeIndex)
+    if success then
+        ClearPedTasks(ped)
+        TriggerServerEvent('craft3d:finishCraft', recipeIndex)
+    else
+        ClearPedTasks(ped)
+    end
+
     isCrafting = false
 end
 
