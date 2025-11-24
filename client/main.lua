@@ -5,6 +5,9 @@ local openTable
 local menuOpen = false
 local selectedRecipe = 1
 local isCrafting = false
+local clamp = function(value, min, max)
+    return math.max(min, math.min(max, value))
+end
 
 local function getCoordsComponents(coords)
     if not coords then return end
@@ -14,7 +17,7 @@ local function getCoordsComponents(coords)
     if coordsType == 'vector4' then
         return coords.x, coords.y, coords.z, coords.w
     elseif coordsType == 'vector3' then
-        return coords.x, coords.y, coords.z
+        return coords.x, coords.y, coords.z, 0.0
     elseif coordsType == 'table' then
         local x = coords.x or coords[1]
         local y = coords.y or coords[2]
@@ -25,22 +28,20 @@ local function getCoordsComponents(coords)
 end
 
 local function getTablePosition(tableData)
-    local coords = tableData.coords
-    local x, y, z = getCoordsComponents(coords)
+    local x, y, z = getCoordsComponents(tableData.coords)
 
     if x and y and z then
-        return vector3(x, y, z)
+        return vector3(x + 0.0, y + 0.0, z + 0.0)
     end
 
     return vector3(0.0, 0.0, 0.0)
 end
 
 local function getTableHeading(tableData)
-    local coords = tableData.coords
-    local _, _, _, w = getCoordsComponents(coords)
+    local _, _, _, w = getCoordsComponents(tableData.coords)
 
     if w then
-        return w
+        return w + 0.0
     end
 
     return tableData.heading or 0.0
@@ -102,52 +103,29 @@ local function Draw3DText(coords, text, scale)
     DrawText(_x, _y)
 end
 
-local function DrawFloatingCard(text, onScreenX, onScreenY, width, height, active)
-    local alpha = active and 180 or 120
-    DrawRect(onScreenX, onScreenY, width, height, 10, 10, 10, alpha)
-    DrawRect(onScreenX, onScreenY - height / 2 + 0.005, width, 0.003, 255, 163, 26, 200)
-    SetTextScale(0.32, 0.32)
-    SetTextFont(4)
-    SetTextProportional(1)
-    SetTextColour(active and 255 or 200, active and 255 or 200, 255, 255)
-    SetTextCentre(true)
-    SetTextEntry('STRING')
-    AddTextComponentString(text)
-    DrawText(onScreenX, onScreenY - 0.012)
-end
-
-local function DrawControlHints(text, x, y)
-    SetTextScale(0.3, 0.3)
-    SetTextFont(0)
-    SetTextColour(255, 255, 255, 200)
-    SetTextCentre(true)
-    SetTextEntry('STRING')
-    AddTextComponentString(text)
-    DrawText(x, y)
-end
-
-local function drawMenu(tableData)
-    local baseCoords = getTablePosition(tableData)
-    local base = baseCoords + vector3(0.0, 0.0, 1.05)
-    local onScreen, anchorX, anchorY = World3dToScreen2d(base.x, base.y, base.z)
-    if not onScreen then return end
-
-    local width = 0.18
-    local height = 0.045
-    for idx, recipe in ipairs(Config.Recipes) do
-        local offsetZ = (idx - 1) * 0.06
-        local show, cardX, cardY = World3dToScreen2d(base.x, base.y, base.z + offsetZ)
-        if show then
-            DrawFloatingCard(recipe.label, cardX, cardY, width, height, selectedRecipe == idx)
-        end
-    end
-
-    DrawControlHints('↑/↓ Sélection   ~y~E~s~ Craft   ~r~Retour~s~ Quitter', anchorX, anchorY + 0.12)
-end
-
 local function closeMenu()
+    if not menuOpen then return end
+
     menuOpen = false
     openTable = nil
+    SetNuiFocus(false, false)
+    SendNUIMessage({ action = 'close' })
+end
+
+local function openMenu(tableData)
+    if menuOpen or isCrafting then return end
+
+    openTable = tableData
+    menuOpen = true
+    selectedRecipe = 1
+
+    SetNuiFocus(true, true)
+    SendNUIMessage({
+        action = 'open',
+        recipes = Config.Recipes,
+        selected = selectedRecipe,
+        title = 'Établi de craft'
+    })
 end
 
 local function runProgress(recipe)
@@ -164,19 +142,29 @@ local function runProgress(recipe)
         debugPrint('Progression: export introuvable, utilisation de la barre locale')
     end
 
+    SendNUIMessage({
+        action = 'progress',
+        label = ('Fabrication: %s'):format(recipe.label),
+        duration = recipe.time
+    })
+
     local endTime = GetGameTimer() + recipe.time
     while GetGameTimer() < endTime do
         Wait(0)
-        DrawRect(0.5, 0.92, 0.2, 0.015, 10, 10, 10, 150)
-        local remaining = (endTime - GetGameTimer()) / recipe.time
-        DrawRect(0.5 - (1 - remaining) * 0.1, 0.92, 0.2 * remaining, 0.008, 255, 163, 26, 220)
-        DrawControlHints(('Fabrication en cours... %ds'):format(math.ceil((endTime - GetGameTimer()) / 1000)), 0.5, 0.88)
     end
+
+    SendNUIMessage({ action = 'progress-finish' })
 end
 
-local function startCraft(recipe)
+local function startCraft(recipeIndex)
     if isCrafting then return end
+
+    local recipe = Config.Recipes[recipeIndex]
+    if not recipe then return end
+
     isCrafting = true
+    selectedRecipe = recipeIndex
+    closeMenu()
 
     local ped = PlayerPedId()
     TaskStartScenarioInPlace(ped, 'WORLD_HUMAN_HAMMERING', 0, true)
@@ -184,46 +172,37 @@ local function startCraft(recipe)
     runProgress(recipe)
 
     ClearPedTasks(ped)
-    TriggerServerEvent('craft3d:finishCraft', selectedRecipe)
+    TriggerServerEvent('craft3d:finishCraft', recipeIndex)
     isCrafting = false
 end
 
 RegisterNetEvent('craft3d:startProgress', function(recipeIndex)
-    local recipe = Config.Recipes[recipeIndex]
-    if not recipe then return end
-    startCraft(recipe)
+    startCraft(recipeIndex)
 end)
 
 RegisterNetEvent('craft3d:cancelProgress', function()
     ClearPedTasks(PlayerPedId())
     isCrafting = false
+    SendNUIMessage({ action = 'progress-finish' })
 end)
 
-local function openMenu(tableData)
-    if menuOpen then return end
-    openTable = tableData
-    menuOpen = true
-    selectedRecipe = 1
+RegisterNUICallback('craft3d:close', function(_, cb)
+    closeMenu()
+    cb({})
+end)
 
-    CreateThread(function()
-        while menuOpen do
-            Wait(0)
-            drawMenu(tableData)
+RegisterNUICallback('craft3d:select', function(data, cb)
+    local index = tonumber(data and data.index) or 1
+    selectedRecipe = clamp(index, 1, #Config.Recipes)
+    cb({})
+end)
 
-            if IsControlJustPressed(0, 172) then
-                selectedRecipe = selectedRecipe - 1
-                if selectedRecipe < 1 then selectedRecipe = #Config.Recipes end
-            elseif IsControlJustPressed(0, 173) then
-                selectedRecipe = selectedRecipe + 1
-                if selectedRecipe > #Config.Recipes then selectedRecipe = 1 end
-            elseif IsControlJustPressed(0, 38) then
-                TriggerServerEvent('craft3d:attemptCraft', selectedRecipe)
-            elseif IsControlJustPressed(0, 202) then
-                closeMenu()
-            end
-        end
-    end)
-end
+RegisterNUICallback('craft3d:start', function(data, cb)
+    local index = tonumber(data and data.index) or selectedRecipe
+    selectedRecipe = index
+    TriggerServerEvent('craft3d:attemptCraft', selectedRecipe)
+    cb({})
+end)
 
 CreateThread(function()
     Wait(500)
