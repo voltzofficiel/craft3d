@@ -6,6 +6,24 @@ local menuOpen = false
 local selectedRecipe = 1
 local isCrafting = false
 
+local function getTablePosition(tableData)
+    local coords = tableData.coords
+    if coords then
+        return vector3(coords.x, coords.y, coords.z)
+    end
+
+    return vector3(0.0, 0.0, 0.0)
+end
+
+local function getTableHeading(tableData)
+    local coords = tableData.coords
+    if coords and coords.w then
+        return coords.w
+    end
+
+    return tableData.heading or 0.0
+end
+
 local function debugPrint(msg)
     if Config.Debug then
         print(('[craft3d] %s'):format(msg))
@@ -33,13 +51,15 @@ end
 local function spawnTables()
     for _, tableData in ipairs(Config.Tables) do
         if loadModel(tableData.model) then
-            local obj = CreateObject(tableData.model, tableData.coords.x, tableData.coords.y, tableData.coords.z - 1.0, false, false, true)
-            SetEntityHeading(obj, tableData.heading or 0.0)
+            local position = getTablePosition(tableData)
+            local heading = getTableHeading(tableData)
+            local obj = CreateObject(tableData.model, position.x, position.y, position.z - 1.0, false, false, true)
+            SetEntityHeading(obj, heading)
             FreezeEntityPosition(obj, true)
             SetEntityAsMissionEntity(obj, true, true)
             tableData.entity = obj
             craftingTables[#craftingTables + 1] = tableData
-            debugPrint(('Table spawnée à %s'):format(tableData.coords))
+            debugPrint(('Table spawnée à %s'):format(position))
         else
             print(('[craft3d] Impossible de charger le modèle %s'):format(tableData.model))
         end
@@ -85,7 +105,8 @@ local function DrawControlHints(text, x, y)
 end
 
 local function drawMenu(tableData)
-    local base = tableData.coords + vector3(0.0, 0.0, 1.05)
+    local baseCoords = getTablePosition(tableData)
+    local base = baseCoords + vector3(0.0, 0.0, 1.05)
     local onScreen, anchorX, anchorY = World3dToScreen2d(base.x, base.y, base.z)
     if not onScreen then return end
 
@@ -193,11 +214,12 @@ CreateThread(function()
         local nearTable
 
         for _, tableData in ipairs(craftingTables) do
-            local distance = #(playerCoords - tableData.coords)
+            local tablePosition = getTablePosition(tableData)
+            local distance = #(playerCoords - tablePosition)
             if distance <= (tableData.radius + 0.5) then
                 nearTable = tableData
                 sleep = 0
-                Draw3DText(tableData.coords + vector3(0.0, 0.0, 1.0), '~y~E~s~ - Utiliser l\'établi de craft', 0.35)
+                Draw3DText(tablePosition + vector3(0.0, 0.0, 1.0), '~y~E~s~ - Utiliser l\'établi de craft', 0.35)
                 if IsControlJustPressed(0, 38) and not menuOpen and not isCrafting then
                     openMenu(tableData)
                 end
